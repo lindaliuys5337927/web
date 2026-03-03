@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三年級成語大冒險 - 第三字挑戰 (支援平板)</title>
+<style>
+    body {
+        font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif;
+        background-color: #e3f2fd; /* 海洋藍底色 */
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        color: #333;
+    }
+    h1 {
+        color: #0d47a1;
+        font-size: 32px;
+        margin-bottom: 5px;
+    }
+    p {
+        font-size: 18px;
+        color: #1565c0;
+        margin-bottom: 15px;
+    }
+    .hint {
+        color: #d84315;
+        font-weight: bold;
+        background: #ffe0b2;
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    /* 計時器與控制區 */
+    .control-panel {
+        background-color: #ffffff;
+        border: 3px solid #1976d2;
+        border-radius: 15px;
+        padding: 15px 30px;
+        display: inline-block;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .timer {
+        font-size: 32px;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 0 20px;
+        font-family: monospace;
+    }
+    button.start-btn {
+        background-color: #1e88e5;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        font-size: 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.1s, background-color 0.3s;
+    }
+    button.start-btn:hover {
+        background-color: #1565c0;
+        transform: scale(1.05);
+    }
+    
+    /* 遊戲主區塊 */
+    .game-container {
+        display: none;
+        max-width: 1200px;
+        margin: 0 auto;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    /* 平板適應：22題適合雙欄排版 */
+    .questions-area {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        flex: 2.5;
+        text-align: left;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 15px;
+    }
+    @media (max-width: 768px) {
+        .questions-area { grid-template-columns: 1fr; }
+        .game-container { flex-direction: column; }
+        .answers-area { position: static; max-height: 300px; }
+    }
+
+    .answers-area {
+        background: #fffde7;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-content: flex-start;
+        justify-content: center;
+        position: sticky;
+        top: 20px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .answers-title {
+        width: 100%;
+        text-align: center;
+        color: #f57f17;
+        font-weight: bold;
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+    .question {
+        font-size: 22px;
+        display: flex;
+        align-items: center;
+        background-color: #bbdefb;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border-left: 4px solid #2196f3;
+    }
+    .drop-zone {
+        width: 38px;
+        height: 38px;
+        border: 2px dashed #9e9e9e;
+        border-radius: 6px;
+        margin: 0 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        transition: all 0.3s;
+    }
+    .drop-zone.hover {
+        background-color: #e8f5e9;
+        border-color: #4caf50;
+        transform: scale(1.1);
+    }
+    .drop-zone.correct {
+        border: 2px solid #4caf50;
+        background-color: #c8e6c9;
+        color: #d32f2f;
+        font-weight: bold;
+    }
+    .draggable {
+        width: 42px;
+        height: 42px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #b3e5fc;
+        border: 2px solid #81d4fa;
+        border-radius: 6px;
+        font-size: 22px;
+        color: #0277bd;
+        font-weight: bold;
+        cursor: grab;
+        user-select: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        touch-action: none; /* 防止平板在觸控方塊時觸發網頁滾動 */
+        transition: transform 0.1s;
+    }
+    .draggable.dragging {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+
+    #success-msg {
+        display: none;
+        font-size: 28px;
+        color: #d32f2f;
+        font-weight: bold;
+        margin-top: 25px;
+        background-color: #fff9c4;
+        padding: 20px;
+        border-radius: 15px;
+        border: 3px solid #fbc02d;
+        animation: pop 0.6s ease-in-out;
+    }
+    @keyframes pop {
+        0% { transform: scale(0.5); opacity: 0; }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .answers-area::-webkit-scrollbar { width: 8px; }
+    .answers-area::-webkit-scrollbar-thumb { background-color: #64b5f6; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<h1>⏱️ 成語第三字配對：計時挑戰賽</h1>
+<p>歡迎來到第三關（共 22 題）！這次要在第三個字放入正確的字卡，準備好就開始吧！</p>
+<div class="hint">📱 提示：如果是使用平板，請用手指滑動「黃色底色的空白處」來上下尋找字卡喔！</div>
+<br>
+
+<div class="control-panel">
+    <button class="start-btn" id="start-btn" onclick="startGame()">▶️ 開始遊戲</button>
+    <span class="timer" id="timer">00:00</span>
+</div>
+
+<div class="game-container" id="game-container">
+    <div class="questions-area" id="questions-area"></div>
+    <div class="answers-area" id="answers-area">
+        <div class="answers-title">✨ 待選字區 ✨</div>
+    </div>
+</div>
+
+<div id="success-msg">
+    🎉 闖關成功！你對成語的掌握越來越熟練囉！<br>
+    <span style="font-size:36px; color:#1976d2;">總花費時間：<span id="final-time"></span></span>
+</div>
+
+<script>
+    // 嚴選第三欄 (第三字缺漏) 22題
+    const data = [
+        { textPre: "蒸蒸", textPost: "上", answer: "日" },
+        { textPre: "力爭", textPost: "游", answer: "上" },
+        { textPre: "一意", textPost: "行", answer: "孤" },
+        { textPre: "四面", textPost: "歌", answer: "楚" },
+        { textPre: "心平", textPost: "和", answer: "氣" },
+        { textPre: "對牛", textPost: "琴", answer: "彈" },
+        { textPre: "口蜜", textPost: "劍", answer: "腹" },
+        { textPre: "入境", textPost: "俗", answer: "隨" },
+        { textPre: "聚精", textPost: "神", answer: "會" },
+        { textPre: "耳提", textPost: "命", answer: "面" },
+        { textPre: "兩袖", textPost: "風", answer: "清" },
+        { textPre: "開源", textPost: "流", answer: "節" },
+        { textPre: "當頭", textPost: "喝", answer: "棒" },
+        { textPre: "節衣", textPost: "食", answer: "縮" },
+        { textPre: "三言", textPost: "語", answer: "兩" },
+        { textPre: "名列", textPost: "茅", answer: "前" },
+        { textPre: "物以", textPost: "聚", answer: "類" },
+        { textPre: "斬草", textPost: "根", answer: "除" },
+        { textPre: "忍氣", textPost: "聲", answer: "吞" },
+        { textPre: "推己", textPost: "人", answer: "及" },
+        { textPre: "平分", textPost: "色", answer: "秋" },
+        { textPre: "多管", textPost: "事", answer: "閒" }
+    ];
+
+    let correctCount = 0;
+    let timerInterval;
+    let secondsElapsed = 0;
+    let gameStarted = false;
+
+    function formatTime(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function startGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('game-container').style.display = 'flex';
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            document.getElementById('timer').textContent = formatTime(secondsElapsed);
+        }, 1000);
+    }
+
+    function initGame() {
+        const qArea = document.getElementById('questions-area');
+        const aArea = document.getElementById('answers-area');
+        
+        data.forEach((item, index) => {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question';
+            // 將 drop-zone 夾在 textPre 與 textPost 之間 (第三個字的位置)
+            qDiv.innerHTML = `<span style="color:#999; margin-right:5px; font-size:14px;">${index+1}.</span><span>${item.textPre}</span><div class="drop-zone" data-answer="${item.answer}"></div><span>${item.textPost}</span>`;
+            qArea.appendChild(qDiv);
+        });
+
+        const answers = [...data].sort(() => Math.random() - 0.5);
+        answers.forEach(item => {
+            const dragDiv = document.createElement('div');
+            dragDiv.className = 'draggable';
+            dragDiv.draggable = true;
+            dragDiv.textContent = item.answer;
+            aArea.appendChild(dragDiv);
+        });
+
+        setupDragAndDrop();
+    }
+
+    function setupDragAndDrop() {
+        const draggables = document.querySelectorAll('.draggable');
+        const dropZones = document.querySelectorAll('.drop-zone');
+
+        // ======== 1. 電腦滑鼠專用 ========
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => { draggable.classList.add('dragging'); });
+            draggable.addEventListener('dragend', () => { draggable.classList.remove('dragging'); });
+        });
+
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault(); 
+                if(!zone.classList.contains('correct')) zone.classList.add('hover');
+            });
+            zone.addEventListener('dragleave', () => { zone.classList.remove('hover'); });
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('hover');
+                if(zone.classList.contains('correct')) return; 
+
+                const draggable = document.querySelector('.dragging');
+                if (!draggable) return;
+                processDrop(draggable, zone);
+            });
+        });
+
+        // ======== 2. 平板觸控專用 ========
+        let currentTouchDrag = null;
+        let placeholder = null;
+
+        draggables.forEach(draggable => {
+            draggable.addEventListener('touchstart', handleTouchStart, {passive: false});
+            draggable.addEventListener('touchmove', handleTouchMove, {passive: false});
+            draggable.addEventListener('touchend', handleTouchEnd);
+        });
+
+        function handleTouchStart(e) {
+            e.preventDefault(); 
+            currentTouchDrag = e.target;
+            currentTouchDrag.classList.add('dragging');
+
+            placeholder = document.createElement('div');
+            placeholder.className = 'draggable';
+            placeholder.style.visibility = 'hidden';
+            currentTouchDrag.parentNode.insertBefore(placeholder, currentTouchDrag);
+
+            const rect = currentTouchDrag.getBoundingClientRect();
+            currentTouchDrag.style.position = 'fixed';
+            currentTouchDrag.style.zIndex = '1000';
+            currentTouchDrag.style.width = rect.width + 'px';
+            currentTouchDrag.style.height = rect.height + 'px';
+            currentTouchDrag.style.margin = '0';
+            
+            moveTouchElement(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchMove(e) {
+            if (!currentTouchDrag) return;
+            e.preventDefault();
+            moveTouchElement(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchEnd(e) {
+            if (!currentTouchDrag) return;
+            e.preventDefault();
+
+            const touch = e.changedTouches[0];
+            
+            currentTouchDrag.style.display = 'none'; 
+            const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            currentTouchDrag.style.display = 'flex'; 
+
+            const dropZone = elemBelow ? elemBelow.closest('.drop-zone') : null;
+
+            if (dropZone && !dropZone.classList.contains('correct')) {
+                processDrop(currentTouchDrag, dropZone, true);
+            } else {
+                revertTouchDrag(); 
+            }
+        }
+
+        function moveTouchElement(x, y) {
+            currentTouchDrag.style.left = (x - currentTouchDrag.offsetWidth / 2) + 'px';
+            currentTouchDrag.style.top = (y - currentTouchDrag.offsetHeight / 2) + 'px';
+        }
+
+        function revertTouchDrag() {
+            currentTouchDrag.style.position = '';
+            currentTouchDrag.style.zIndex = '';
+            currentTouchDrag.style.left = '';
+            currentTouchDrag.style.top = '';
+            currentTouchDrag.style.width = '';
+            currentTouchDrag.style.height = '';
+            currentTouchDrag.style.margin = '';
+            currentTouchDrag.classList.remove('dragging');
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.replaceChild(currentTouchDrag, placeholder);
+            }
+            currentTouchDrag = null;
+            placeholder = null;
+        }
+
+        // ======== 3. 共用的判定邏輯 ========
+        function processDrop(draggedElement, zone, isTouch = false) {
+            const draggedAnswer = draggedElement.textContent;
+            const expectedAnswer = zone.getAttribute('data-answer');
+
+            if (draggedAnswer === expectedAnswer) {
+                zone.textContent = draggedAnswer;
+                zone.classList.add('correct');
+                draggedElement.remove(); 
+                if(isTouch && placeholder) placeholder.remove();
+                
+                correctCount++;
+                if(correctCount === data.length) {
+                    clearInterval(timerInterval);
+                    document.getElementById('final-time').textContent = formatTime(secondsElapsed);
+                    document.getElementById('success-msg').style.display = 'block';
+                }
+            } else {
+                zone.style.backgroundColor = '#ffcccc';
+                zone.style.borderColor = 'red';
+                setTimeout(() => {
+                    if(!zone.classList.contains('correct')) {
+                        zone.style.backgroundColor = '#fff';
+                        zone.style.borderColor = '#9e9e9e';
+                    }
+                }, 400);
+                if(isTouch) revertTouchDrag();
+            }
+        }
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
