@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三年級成語大冒險 - 第四字挑戰 (支援平板)</title>
+<style>
+    body {
+        font-family: 'Comic Sans MS', 'Microsoft JhengHei', sans-serif;
+        background-color: #e8f5e9; /* 幸運綠底色 */
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        color: #333;
+    }
+    h1 {
+        color: #1b5e20;
+        font-size: 32px;
+        margin-bottom: 5px;
+    }
+    p {
+        font-size: 18px;
+        color: #2e7d32;
+        margin-bottom: 15px;
+    }
+    .hint {
+        color: #e65100;
+        font-weight: bold;
+        background: #ffe0b2;
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    /* 計時器與控制區 */
+    .control-panel {
+        background-color: #ffffff;
+        border: 3px solid #388e3c;
+        border-radius: 15px;
+        padding: 15px 30px;
+        display: inline-block;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .timer {
+        font-size: 32px;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 0 20px;
+        font-family: monospace;
+    }
+    button.start-btn {
+        background-color: #43a047;
+        color: white;
+        border: none;
+        padding: 10px 25px;
+        font-size: 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: transform 0.1s, background-color 0.3s;
+    }
+    button.start-btn:hover {
+        background-color: #2e7d32;
+        transform: scale(1.05);
+    }
+    
+    /* 遊戲主區塊 */
+    .game-container {
+        display: none;
+        max-width: 1300px;
+        margin: 0 auto;
+        gap: 20px;
+        align-items: flex-start;
+    }
+    
+    /* 平板適應：46題適合三欄排版，隨螢幕縮小遞減 */
+    .questions-area {
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        flex: 3;
+        text-align: left;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr); 
+        gap: 12px 15px;
+    }
+    @media (max-width: 900px) {
+        .questions-area { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+        .questions-area { grid-template-columns: 1fr; }
+        .game-container { flex-direction: column; }
+        .answers-area { position: static; max-height: 300px; }
+    }
+
+    .answers-area {
+        background: #f1f8e9;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-content: flex-start;
+        justify-content: center;
+        position: sticky;
+        top: 20px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .answers-title {
+        width: 100%;
+        text-align: center;
+        color: #ef6c00;
+        font-weight: bold;
+        font-size: 20px;
+        margin-bottom: 10px;
+    }
+    .question {
+        font-size: 20px;
+        display: flex;
+        align-items: center;
+        background-color: #c8e6c9;
+        padding: 6px 10px;
+        border-radius: 8px;
+        border-left: 4px solid #4caf50;
+    }
+    .drop-zone {
+        width: 35px;
+        height: 35px;
+        border: 2px dashed #81c784;
+        border-radius: 6px;
+        margin-left: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #fff;
+        transition: all 0.3s;
+    }
+    .drop-zone.hover {
+        background-color: #a5d6a7;
+        border-color: #388e3c;
+        transform: scale(1.1);
+    }
+    .drop-zone.correct {
+        border: 2px solid #388e3c;
+        background-color: #e8f5e9;
+        color: #d32f2f;
+        font-weight: bold;
+    }
+    .draggable {
+        width: 38px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #81c784;
+        border: 2px solid #4caf50;
+        border-radius: 6px;
+        font-size: 20px;
+        color: #1b5e20;
+        font-weight: bold;
+        cursor: grab;
+        user-select: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        touch-action: none; /* 防止平板在觸控方塊時觸發網頁滾動 */
+        transition: transform 0.1s;
+    }
+    .draggable.dragging {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+
+    #success-msg {
+        display: none;
+        font-size: 28px;
+        color: #1b5e20;
+        font-weight: bold;
+        margin-top: 25px;
+        background-color: #c8e6c9;
+        padding: 20px;
+        border-radius: 15px;
+        border: 3px solid #4caf50;
+        animation: pop 0.6s ease-in-out;
+    }
+    @keyframes pop {
+        0% { transform: scale(0.5); opacity: 0; }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    .answers-area::-webkit-scrollbar { width: 8px; }
+    .answers-area::-webkit-scrollbar-thumb { background-color: #81c784; border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<h1>⏱️ 成語第四字配對：幸運綠終極挑戰</h1>
+<p>這是最後一關了！46 個成語等你來配對，看看能不能創下最快紀錄！</p>
+<div class="hint">📱 提示：如果是使用平板，請用手指滑動「黃色底色的空白處」來上下尋找字卡喔！</div>
+<br>
+
+<div class="control-panel">
+    <button class="start-btn" id="start-btn" onclick="startGame()">▶️ 最終挑戰開始</button>
+    <span class="timer" id="timer">00:00</span>
+</div>
+
+<div class="game-container" id="game-container">
+    <div class="questions-area" id="questions-area"></div>
+    <div class="answers-area" id="answers-area">
+        <div class="answers-title">✨ 待選字區 ✨</div>
+    </div>
+</div>
+
+<div id="success-msg">
+    🎉 完美破關！你已經成功征服了所有的成語關卡，你是真正的成語大師！<br>
+    <span style="font-size:36px; color:#c62828;">總花費時間：<span id="final-time"></span></span>
+</div>
+
+<script>
+    // 嚴選第四欄 (第四字缺漏) 46題
+    const data = [
+        { textPre: "易如反", answer: "掌" }, { textPre: "目光短", answer: "淺" },
+        { textPre: "舉棋不", answer: "定" }, { textPre: "無中生", answer: "有" },
+        { textPre: "粗枝大", answer: "葉" }, { textPre: "刮目相", answer: "看" },
+        { textPre: "兩敗俱", answer: "傷" }, { textPre: "胸有成", answer: "竹" },
+        { textPre: "乘風破", answer: "浪" }, { textPre: "人去樓", answer: "空" },
+        { textPre: "老當益", answer: "壯" }, { textPre: "喋喋不", answer: "休" },
+        { textPre: "如數家", answer: "珍" }, { textPre: "守株待", answer: "兔" },
+        { textPre: "挑撥離", answer: "間" }, { textPre: "一成不", answer: "變" },
+        { textPre: "一見如", answer: "故" }, { textPre: "實事求", answer: "是" },
+        { textPre: "迎刃而", answer: "解" }, { textPre: "得不償", answer: "失" },
+        { textPre: "充耳不", answer: "聞" }, { textPre: "天涯海", answer: "角" },
+        { textPre: "日新月", answer: "異" }, { textPre: "牽腸掛", answer: "肚" },
+        { textPre: "望眼欲", answer: "穿" }, { textPre: "料事如", answer: "神" },
+        { textPre: "言聽計", answer: "從" }, { textPre: "粗茶淡", answer: "飯" },
+        { textPre: "水深火", answer: "熱" }, { textPre: "與日俱", answer: "增" },
+        { textPre: "屈指可", answer: "數" }, { textPre: "七步成", answer: "詩" },
+        { textPre: "走投無", answer: "路" }, { textPre: "出口成", answer: "章" },
+        { textPre: "心悅誠", answer: "服" }, { textPre: "輕而易", answer: "舉" },
+        { textPre: "少見多", answer: "怪" }, { textPre: "潛移默", answer: "化" },
+        { textPre: "手忙腳", answer: "亂" }, { textPre: "一目十", answer: "行" },
+        { textPre: "握手言", answer: "和" }, { textPre: "迫不及", answer: "待" },
+        { textPre: "每況愈", answer: "下" }, { textPre: "無可奈", answer: "何" },
+        { textPre: "疲於奔", answer: "命" }, { textPre: "門可羅", answer: "雀" }
+    ];
+
+    let correctCount = 0;
+    let timerInterval;
+    let secondsElapsed = 0;
+    let gameStarted = false;
+
+    function formatTime(totalSeconds) {
+        const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const s = (totalSeconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function startGame() {
+        if (gameStarted) return;
+        gameStarted = true;
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('game-container').style.display = 'flex';
+        timerInterval = setInterval(() => {
+            secondsElapsed++;
+            document.getElementById('timer').textContent = formatTime(secondsElapsed);
+        }, 1000);
+    }
+
+    function initGame() {
+        const qArea = document.getElementById('questions-area');
+        const aArea = document.getElementById('answers-area');
+        
+        data.forEach((item, index) => {
+            const qDiv = document.createElement('div');
+            qDiv.className = 'question';
+            // 將 drop-zone 放在字串的最後面
+            qDiv.innerHTML = `<span style="color:#757575; margin-right:5px; font-size:14px;">${index+1}.</span><span>${item.textPre}</span><div class="drop-zone" data-answer="${item.answer}"></div>`;
+            qArea.appendChild(qDiv);
+        });
+
+        const answers = [...data].sort(() => Math.random() - 0.5);
+        answers.forEach(item => {
+            const dragDiv = document.createElement('div');
+            dragDiv.className = 'draggable';
+            dragDiv.draggable = true;
+            dragDiv.textContent = item.answer;
+            aArea.appendChild(dragDiv);
+        });
+
+        setupDragAndDrop();
+    }
+
+    function setupDragAndDrop() {
+        const draggables = document.querySelectorAll('.draggable');
+        const dropZones = document.querySelectorAll('.drop-zone');
+
+        // ======== 1. 電腦滑鼠專用 ========
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => { draggable.classList.add('dragging'); });
+            draggable.addEventListener('dragend', () => { draggable.classList.remove('dragging'); });
+        });
+
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault(); 
+                if(!zone.classList.contains('correct')) zone.classList.add('hover');
+            });
+            zone.addEventListener('dragleave', () => { zone.classList.remove('hover'); });
+            zone.addEventListener('drop', e => {
+                e.preventDefault();
+                zone.classList.remove('hover');
+                if(zone.classList.contains('correct')) return; 
+
+                const draggable = document.querySelector('.dragging');
+                if (!draggable) return;
+                processDrop(draggable, zone);
+            });
+        });
+
+        // ======== 2. 平板觸控專用 ========
+        let currentTouchDrag = null;
+        let placeholder = null;
+
+        draggables.forEach(draggable => {
+            draggable.addEventListener('touchstart', handleTouchStart, {passive: false});
+            draggable.addEventListener('touchmove', handleTouchMove, {passive: false});
+            draggable.addEventListener('touchend', handleTouchEnd);
+        });
+
+        function handleTouchStart(e) {
+            e.preventDefault(); 
+            currentTouchDrag = e.target;
+            currentTouchDrag.classList.add('dragging');
+
+            placeholder = document.createElement('div');
+            placeholder.className = 'draggable';
+            placeholder.style.visibility = 'hidden';
+            currentTouchDrag.parentNode.insertBefore(placeholder, currentTouchDrag);
+
+            const rect = currentTouchDrag.getBoundingClientRect();
+            currentTouchDrag.style.position = 'fixed';
+            currentTouchDrag.style.zIndex = '1000';
+            currentTouchDrag.style.width = rect.width + 'px';
+            currentTouchDrag.style.height = rect.height + 'px';
+            currentTouchDrag.style.margin = '0';
+            
+            moveTouchElement(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchMove(e) {
+            if (!currentTouchDrag) return;
+            e.preventDefault();
+            moveTouchElement(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchEnd(e) {
+            if (!currentTouchDrag) return;
+            e.preventDefault();
+
+            const touch = e.changedTouches[0];
+            
+            currentTouchDrag.style.display = 'none'; 
+            const elemBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+            currentTouchDrag.style.display = 'flex'; 
+
+            const dropZone = elemBelow ? elemBelow.closest('.drop-zone') : null;
+
+            if (dropZone && !dropZone.classList.contains('correct')) {
+                processDrop(currentTouchDrag, dropZone, true);
+            } else {
+                revertTouchDrag(); 
+            }
+        }
+
+        function moveTouchElement(x, y) {
+            currentTouchDrag.style.left = (x - currentTouchDrag.offsetWidth / 2) + 'px';
+            currentTouchDrag.style.top = (y - currentTouchDrag.offsetHeight / 2) + 'px';
+        }
+
+        function revertTouchDrag() {
+            currentTouchDrag.style.position = '';
+            currentTouchDrag.style.zIndex = '';
+            currentTouchDrag.style.left = '';
+            currentTouchDrag.style.top = '';
+            currentTouchDrag.style.width = '';
+            currentTouchDrag.style.height = '';
+            currentTouchDrag.style.margin = '';
+            currentTouchDrag.classList.remove('dragging');
+            if (placeholder && placeholder.parentNode) {
+                placeholder.parentNode.replaceChild(currentTouchDrag, placeholder);
+            }
+            currentTouchDrag = null;
+            placeholder = null;
+        }
+
+        // ======== 3. 共用的判定邏輯 ========
+        function processDrop(draggedElement, zone, isTouch = false) {
+            const draggedAnswer = draggedElement.textContent;
+            const expectedAnswer = zone.getAttribute('data-answer');
+
+            if (draggedAnswer === expectedAnswer) {
+                zone.textContent = draggedAnswer;
+                zone.classList.add('correct');
+                draggedElement.remove(); 
+                if(isTouch && placeholder) placeholder.remove();
+                
+                correctCount++;
+                if(correctCount === data.length) {
+                    clearInterval(timerInterval);
+                    document.getElementById('final-time').textContent = formatTime(secondsElapsed);
+                    document.getElementById('success-msg').style.display = 'block';
+                }
+            } else {
+                zone.style.backgroundColor = '#ffcdd2';
+                zone.style.borderColor = '#f44336';
+                setTimeout(() => {
+                    if(!zone.classList.contains('correct')) {
+                        zone.style.backgroundColor = '#fff';
+                        zone.style.borderColor = '#81c784';
+                    }
+                }, 400);
+                if(isTouch) revertTouchDrag();
+            }
+        }
+    }
+
+    window.onload = initGame;
+</script>
+
+</body>
+</html>
